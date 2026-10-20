@@ -1,2 +1,102 @@
-# Ticktick_todo_Zectrix_sync
-24h sync 5min per once
+# dida-todo-sync
+
+将滴答清单（TickTick）通过 `webcal/ics` 订阅地址同步到墨水屏云端待办接口的 Python 脚本。
+
+支持能力：
+
+- 定时拉取滴答 ICS（兼容 `VTODO` 与 `VEVENT`）
+- 同步创建/更新/完成/删除到云端待办接口
+- 本地状态持久化，避免重复创建
+- 支持小龙虾调用openClaw
+
+## 1. 运行环境
+
+- Python 3.9+
+- 仅使用标准库，无第三方依赖
+
+## 2. 快速开始
+
+### 2.1 复制配置模板
+
+```bash
+cp .env.example .env
+```
+
+Windows PowerShell：
+
+```powershell
+Copy-Item .env.example .env
+```
+
+### 2.2 填写配置
+
+编辑 `.env`（或直接用系统环境变量）：
+
+- `CLOUD_BASE_URL`：云端 API 地址，默认 `https://cloud.zectrix.com`
+- `CLOUD_API_KEY`：必填，云端 API Key
+- `CLOUD_API_KEY_HEADER`：可选，默认 `X-API-Key`
+- `CLOUD_AUTH_SCHEME`：可选，如 `Bearer`
+- `DEVICE_ID`：必填，设备 ID（MAC）
+- `DIDA_ICS_URL`：必填，滴答订阅地址（`webcal://...` 或 `https://...`）
+- `SYNC_STATE_FILE`：可选，默认 `sync_state.json`
+- `SYNC_INTERVAL_SECONDS`：可选，默认 `300`
+- `REQUEST_TIMEOUT_SECONDS`：可选，默认 `15`
+
+> 必填项未提供时，脚本会启动失败并给出缺失字段提示。
+
+> 滴答订阅地址获取方式，参考：https://help.dida365.com/articles/6950000444106080256
+
+### 2.3 执行
+
+单次同步：
+
+```bash
+python dida_todo_sync.py --once
+```
+
+持续定时同步：
+
+```bash
+python dida_todo_sync.py
+```
+
+## 3. CLI 参数
+
+脚本支持“命令行参数 > 环境变量 > 默认值”优先级：
+
+```bash
+python dida_todo_sync.py \
+  --base-url https://cloud.zectrix.com \
+  --api-key YOUR_API_KEY \
+  --device-id AA:BB:CC:DD:EE:FF \
+  --dida-ics-url webcal://dida365.com/pub/calendar/feeds/xxxx/basic.ics \
+  --sync-interval-seconds 300 \
+  --timeout-seconds 15
+```
+
+可用参数：
+
+- `--base-url`
+- `--api-key`
+- `--api-key-header`
+- `--auth-scheme`
+- `--device-id`
+- `--dida-ics-url`
+- `--state-file`
+- `--sync-interval-seconds`
+- `--timeout-seconds`
+- `--once`
+
+## 4. 同步规则
+
+- 根据滴答任务 `UID` 建立映射关系（保存在状态文件）
+- 滴答新增 -> 云端创建待办
+- 滴答内容变化 -> 云端更新待办
+- 滴答完成状态变化 -> 云端切换完成状态
+- 滴答删除 -> 云端删除对应待办
+
+## 5. 注意事项
+
+- `webcal://` 地址会自动转换为 `https://` 拉取
+- 默认通过 `X-API-Key` 传递 Key；若设置 `CLOUD_AUTH_SCHEME`，则改走 `Authorization`
+- 建议将 API Key 仅放在环境变量中，不要硬编码到代码仓库
