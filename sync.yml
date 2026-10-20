@@ -1,0 +1,50 @@
+name: dida-sync
+
+# 滴答清单 -> 墨水屏待办，每 5 分钟同步一次
+#
+# 触发方式：
+#   1. schedule          定时（GitHub 不保证准时，高峰期可能延迟 5-20 分钟）
+#   2. workflow_dispatch 网页上手动点一下
+
+on:
+  schedule:
+    # GitHub 的 cron 用 UTC，但固定间隔不受时区影响。
+    # 私有仓库按"每次运行向上取整到 1 分钟"计费：
+    #   每 5 分钟 = 约 8640 分钟/月，远超私有仓库 2000 分钟/月的免费额度
+    #   私有仓库请改成 "*/30 * * * *"（约 1440 分钟/月）
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+# 同一时刻只跑一个，避免上一次没跑完就叠加
+concurrency:
+  group: dida-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # 关键：缓存 sync_state.json。
+      # 原版脚本的删除逻辑只遍历本地状态里的 uid_to_todo_id，
+      # 状态文件不存在时"删除"永远不会触发，云端会堆积幽灵待办。
+      - name: 恢复同步状态
+        uses: actions/cache@v4
+        with:
+          path: sync_state.json
+          key: dida-state-${{ github.run_id }}
+          restore-keys: |
+            dida-state-
+
+      - name: 同步滴答 -> 墨水屏
+        env:
+          CLOUD_API_KEY: ${{ secrets.CLOUD_API_KEY }}
+          DEVICE_ID: ${{ secrets.DEVICE_ID }}
+          DIDA_ICS_URL: ${{ secrets.DIDA_ICS_URL }}
+          CLOUD_BASE_URL: https://cloud.zectrix.com
+          PYTHONIOENCODING: utf-8
+        run: python3 scheduled_run.py
