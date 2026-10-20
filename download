@@ -1,5 +1,0 @@
-__pycache__/
-*.pyc
-.env
-sync_state.json
-*.log
