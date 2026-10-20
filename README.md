@@ -3,7 +3,6 @@
 将滴答清单（TickTick）通过 `webcal/ics` 订阅地址同步到墨水屏云端待办接口的 Python 脚本。
 
 支持能力：
-
 - 定时拉取滴答 ICS（兼容 `VTODO` 与 `VEVENT`）
 - 同步创建/更新/完成/删除到云端待办接口
 - 本地状态持久化，避免重复创建
@@ -75,7 +74,6 @@ python dida_todo_sync.py \
 ```
 
 可用参数：
-
 - `--base-url`
 - `--api-key`
 - `--api-key-header`
